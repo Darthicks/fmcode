@@ -97,10 +97,6 @@ resource "azurerm_container_group" "main" {
     }
   }
 
-  identity {
-    type = "SystemAssigned"
-  }
-
   ip_address_type = "Public"
   dns_name_label  = "${var.aci_name}-dns"
   tags = {
@@ -117,7 +113,7 @@ resource "azurerm_key_vault" "main" {
 }
 
 resource "azurerm_storage_account" "main" {
-  name                     = var.storage_account_name
+  name                     = "${var.storage_account_name}${substr(md5(var.storage_account_name), 0, 8)}"  # Ensuring unique name
   resource_group_name      = var.resource_group_name
   location                 = var.location
   account_tier             = "Standard"
