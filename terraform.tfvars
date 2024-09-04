@@ -1,5 +1,5 @@
 resource_group_name = "fmkb-dt-dta01-rg"
-location            = "swedensouth"
+location            = "swedencentral"
 vm_name             = "fmkbdtvm"
 aci_name            = "fmkbdtaci"
 key_vault_name      = "fmkbdtkeyvault"
