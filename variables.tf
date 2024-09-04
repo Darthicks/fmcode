@@ -13,19 +13,19 @@ variable "location" {
 variable "vm_name" {
   description = "The name of the virtual machine."
   type        = string
-  default     = "fmkb_dt_vm"
+  default     = "fmkbdtvm"
 }
  
 variable "aci_name" {
   description = "The name of the Azure Container Instance."
   type        = string
-  default     = "fmkb_dt_aci"
+  default     = "fmkbdtaci"
 }
  
 variable "key_vault_name" {
   description = "The name of the Azure Key Vault."
   type        = string
-  default     = "fmkb_dt_keyvault"
+  default     = "fmkbdtkeyvault"
 }
  
 variable "storage_account_name" {
@@ -37,35 +37,35 @@ variable "storage_account_name" {
 variable "app_gateway_name" {
   description = "The name of the Application Gateway."
   type        = string
-  default     = "fmkb_dt_appgw"
+  default     = "fmkbdtappgw"
 }
  
 variable "vnet_name" {
   description = "The name of the Virtual Network."
   type        = string
-  default     = "fmkb_dt_vnet"
+  default     = "fmkbdtvnet"
 }
  
 variable "subnet_name" {
   description = "The name of the Subnet."
   type        = string
-  default     = "fmkb_dt_subnet"
+  default     = "fmkbdtsubnet"
 }
  
 variable "nsg_name" {
   description = "The name of the Network Security Group."
   type        = string
-  default     = "fmkb_dt_nsg"
+  default     = "fmkbdtnsg"
 }
  
 variable "app_service_name" {
   description = "The name of the App Service for Azure Functions."
   type        = string
-  default     = "fmkb_dt_appservice"
+  default     = "fmkbdtappservice"
 }
  
 variable "private_link_name" {
   description = "The name of the Private Link."
   type        = string
-  default     = "fmkb_dt_plink"
+  default     = "fmkbdtplink"
 }
