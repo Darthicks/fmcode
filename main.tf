@@ -93,12 +93,6 @@ resource "azurerm_container_group" "main" {
     type = "SystemAssigned"
   }
 
-  image_registry_credential {
-    server   = "index.docker.io"
-    username = "your_dockerhub_username" # Optional: Only if you use Docker Hub authentication
-    password = "your_dockerhub_password" # Optional: Only if you use Docker Hub authentication
-  }
-
   ip_address_type = "Public"
   dns_name_label  = "${var.aci_name}-dns"
   tags = {
@@ -120,6 +114,8 @@ resource "azurerm_storage_account" "main" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+
+  # Removed allow_blob_public_access to comply with policy
 }
 
 resource "azurerm_public_ip" "main" {
@@ -181,6 +177,7 @@ resource "azurerm_application_gateway" "main" {
     http_listener_name         = "appgwHttpListener"
     backend_address_pool_name  = "appgwBackendPool"
     backend_http_settings_name = "appgwBackendHttpSettings"
+    priority                   = 100 # Added priority to avoid API error
   }
 }
 
@@ -211,11 +208,11 @@ resource "azurerm_app_service_plan" "main" {
 }
 
 resource "azurerm_function_app" "main" {
-  name                        = var.app_service_name
-  location                    = var.location
-  resource_group_name         = var.resource_group_name
-  app_service_plan_id         = azurerm_app_service_plan.main.id
-  storage_account_name        = azurerm_storage_account.main.name
-  storage_account_access_key  = azurerm_storage_account.main.primary_access_key
-  version                     = "~3"
+  name                       = var.app_service_name
+  location                   = var.location
+  resource_group_name        = var.resource_group_name
+  app_service_plan_id        = azurerm_app_service_plan.main.id
+  storage_account_name       = azurerm_storage_account.main.name
+  storage_account_access_key = azurerm_storage_account.main.primary_access_key
+  version                    = "~3"
 }
