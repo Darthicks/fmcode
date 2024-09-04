@@ -7,7 +7,7 @@ variable "resource_group_name" {
 variable "location" {
   description = "The Azure region where resources will be deployed."
   type        = string
-  default     = "swedensouth"
+  default     = "swedencentral"
 }
  
 variable "vm_name" {
