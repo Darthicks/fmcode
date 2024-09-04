@@ -206,7 +206,3 @@ resource "azurerm_function_app" "main" {
   storage_account_access_key = azurerm_storage_account.main.primary_access_key
   version              = "~3"
 }
-
-output "function_app_id" {
-  value = azurerm_function_app.main.id
-}
