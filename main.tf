@@ -79,7 +79,7 @@ resource "azurerm_container_group" "main" {
 
   container {
     name   = "nginx"
-    image  = "myacr.azurecr.io/nginx:latest"  # Update to use Azure Container Registry
+    image  = "nginx:latest"
     cpu    = "0.5"
     memory = "1.5"
 
@@ -89,17 +89,18 @@ resource "azurerm_container_group" "main" {
     }
   }
 
+  identity {
+    type = "SystemAssigned"
+  }
+
   image_registry_credential {
-    server   = "myacr.azurecr.io"  # Replace with your ACR login server
-    username = var.acr_username    # Replace with ACR username or use a managed identity
-    password = var.acr_password    # Replace with ACR password or use a managed identity
+    server   = "index.docker.io"
+    username = "your_dockerhub_username" # Optional: Only if you use Docker Hub authentication
+    password = "your_dockerhub_password" # Optional: Only if you use Docker Hub authentication
   }
 
-  ip_address {
-    type           = "Public"
-    dns_name_label = "${var.aci_name}-dns"
-  }
-
+  ip_address_type = "Public"
+  dns_name_label  = "${var.aci_name}-dns"
   tags = {
     environment = "testing"
   }
@@ -119,8 +120,6 @@ resource "azurerm_storage_account" "main" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-
-  # allow_blob_public_access is removed as it was not expected in this version
 }
 
 resource "azurerm_public_ip" "main" {
@@ -182,7 +181,6 @@ resource "azurerm_application_gateway" "main" {
     http_listener_name         = "appgwHttpListener"
     backend_address_pool_name  = "appgwBackendPool"
     backend_http_settings_name = "appgwBackendHttpSettings"
-    priority                   = 100  # Added priority as required by newer API versions
   }
 }
 
@@ -213,22 +211,11 @@ resource "azurerm_app_service_plan" "main" {
 }
 
 resource "azurerm_function_app" "main" {
-  name                       = var.app_service_name
-  location                   = var.location
-  resource_group_name        = var.resource_group_name
-  app_service_plan_id        = azurerm_app_service_plan.main.id
-  storage_account_name       = azurerm_storage_account.main.name
-  storage_account_access_key = azurerm_storage_account.main.primary_access_key
-  version                    = "~3"
-}
-
-variable "acr_username" {
-  type        = string
-  description = "The username for the Azure Container Registry"
-}
-
-variable "acr_password" {
-  type        = string
-  description = "The password for the Azure Container Registry"
-  sensitive   = true
+  name                        = var.app_service_name
+  location                    = var.location
+  resource_group_name         = var.resource_group_name
+  app_service_plan_id         = azurerm_app_service_plan.main.id
+  storage_account_name        = azurerm_storage_account.main.name
+  storage_account_access_key  = azurerm_storage_account.main.primary_access_key
+  version                     = "~3"
 }
