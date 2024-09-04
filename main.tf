@@ -1,4 +1,5 @@
 provider "azurerm" {
+  features {}
 }
 
 data "azurerm_client_config" "current" {}
@@ -85,13 +86,11 @@ resource "azurerm_container_group" "main" {
     }
   }
 
-  ip_address {
-    type           = "public"
-    ports {
-      port     = 80
-      protocol = "TCP"
-    }
-    dns_name_label = "${var.aci_name}-dns"
+  ip_address_type = "Public"
+  dns_name_label  = "${var.aci_name}-dns"
+  ports {
+    port     = 80
+    protocol = "TCP"
   }
 }
 
@@ -182,18 +181,20 @@ resource "azurerm_service_plan" "main" {
   name                = "fmkb_dt_asp"
   location            = var.location
   resource_group_name = var.resource_group_name
-  sku {
-    tier = "Dynamic"
-    size = "Y1"
-  }
+  kind                = "FunctionApp"
+  sku_name            = "Y1"
 }
 
 resource "azurerm_function_app" "main" {
   name                 = var.app_service_name
   location             = var.location
   resource_group_name  = var.resource_group_name
-  service_plan_id      = azurerm_service_plan.main.id
+  app_service_plan_id  = azurerm_service_plan.main.id
   storage_account_name = azurerm_storage_account.main.name
   storage_account_access_key = azurerm_storage_account.main.primary_access_key
   version              = "~3"
+}
+
+output "function_app_id" {
+  value = azurerm_function_app.main.id
 }
