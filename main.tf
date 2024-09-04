@@ -1,5 +1,5 @@
 provider "azurerm" {
-  features = {}
+  features {}
 }
  
 resource "azurerm_virtual_network" "main" {
