@@ -13,6 +13,14 @@ resource "azurerm_virtual_network" "main" {
   resource_group_name = var.resource_group_name
 }
 
+# Separate subnet for Application Gateway
+resource "azurerm_subnet" "app_gateway_subnet" {
+  name                 = "appGatewaySubnet"
+  resource_group_name  = var.resource_group_name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.2.0/24"]
+}
+
 resource "azurerm_subnet" "main" {
   name                 = var.subnet_name
   resource_group_name  = var.resource_group_name
@@ -114,8 +122,6 @@ resource "azurerm_storage_account" "main" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-
-  # Removed allow_blob_public_access to comply with policy
 }
 
 resource "azurerm_public_ip" "main" {
@@ -139,7 +145,7 @@ resource "azurerm_application_gateway" "main" {
 
   gateway_ip_configuration {
     name      = "appgwIpConfig"
-    subnet_id = azurerm_subnet.main.id
+    subnet_id = azurerm_subnet.app_gateway_subnet.id
   }
 
   frontend_port {
@@ -177,7 +183,7 @@ resource "azurerm_application_gateway" "main" {
     http_listener_name         = "appgwHttpListener"
     backend_address_pool_name  = "appgwBackendPool"
     backend_http_settings_name = "appgwBackendHttpSettings"
-    priority                   = 100 # Added priority to avoid API error
+    priority                   = 100
   }
 }
 
