@@ -96,8 +96,8 @@ resource "azurerm_container_group" "main" {
   }
 
   ip_address {
-    type            = "Public"
-    dns_name_label  = "${var.aci_name}-dns"
+    type           = "Public"
+    dns_name_label = "${var.aci_name}-dns"
   }
 
   tags = {
@@ -120,7 +120,7 @@ resource "azurerm_storage_account" "main" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
 
-  allow_blob_public_access = false
+  # allow_blob_public_access is removed as it was not expected in this version
 }
 
 resource "azurerm_public_ip" "main" {
@@ -220,4 +220,15 @@ resource "azurerm_function_app" "main" {
   storage_account_name       = azurerm_storage_account.main.name
   storage_account_access_key = azurerm_storage_account.main.primary_access_key
   version                    = "~3"
+}
+
+variable "acr_username" {
+  type        = string
+  description = "The username for the Azure Container Registry"
+}
+
+variable "acr_password" {
+  type        = string
+  description = "The password for the Azure Container Registry"
+  sensitive   = true
 }
