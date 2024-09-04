@@ -1,51 +1,85 @@
 provider "azurerm" {
-  features = {}
+  features {}
+  resource_provider_registrations = "none"
+  subscription_id = "07fba911-b0ce-4b88-993a-79b8e5de293a"
 }
 
-resource "azurerm_resource_group" "main" {
-  name     = var.resource_group_name
-  location = var.location
-}
+data "azurerm_client_config" "current" {}
 
 resource "azurerm_virtual_network" "main" {
   name                = var.vnet_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
   address_space       = ["10.0.0.0/16"]
+  location            = var.location
+  resource_group_name = var.resource_group_name
 }
 
 resource "azurerm_subnet" "main" {
   name                 = var.subnet_name
-  resource_group_name  = azurerm_resource_group.main.name
+  resource_group_name  = var.resource_group_name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
 resource "azurerm_network_security_group" "main" {
   name                = var.nsg_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = var.location
+  resource_group_name = var.resource_group_name
 }
 
-resource "azurerm_storage_account" "main" {
-  name                     = var.storage_account_name
-  resource_group_name      = azurerm_resource_group.main.name
-  location                 = azurerm_resource_group.main.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+resource "azurerm_network_interface" "main" {
+  name                = "fmkb_dt_nic"
+  location            = var.location
+  resource_group_name = var.resource_group_name
 
-  allow_blob_public_access = false
+  ip_configuration {
+    name                          = "internal"
+    subnet_id                     = azurerm_subnet.main.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}
+
+resource "azurerm_virtual_machine" "main" {
+  name                  = var.vm_name
+  location              = var.location
+  resource_group_name   = var.resource_group_name
+  network_interface_ids = [azurerm_network_interface.main.id]
+  vm_size               = "Standard_D4as_v5"
+
+  storage_os_disk {
+    name              = "osdisk"
+    caching           = "ReadWrite"
+    create_option     = "FromImage"
+    managed_disk_type = "StandardSSD_LRS"
+    disk_size_gb      = 128
+  }
+
+  storage_image_reference {
+    publisher = "Canonical"
+    offer     = "UbuntuServer"
+    sku       = "18.04-LTS"
+    version   = "latest"
+  }
+
+  os_profile {
+    computer_name  = var.vm_name
+    admin_username = "adminuser"
+    admin_password = "P@ssw0rd123!"
+  }
+
+  os_profile_linux_config {
+    disable_password_authentication = false
+  }
 }
 
 resource "azurerm_container_group" "main" {
   name                = var.aci_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = var.location
+  resource_group_name = var.resource_group_name
   os_type             = "Linux"
 
   container {
-    name   = "mycontainer"
-    image  = "myacr.azurecr.io/myimage:latest"
+    name   = "nginx"
+    image  = "myacr.azurecr.io/nginx:latest"  # Update to use Azure Container Registry
     cpu    = "0.5"
     memory = "1.5"
 
@@ -55,18 +89,53 @@ resource "azurerm_container_group" "main" {
     }
   }
 
-  ip_address {
-    type = "Public"
-    ports {
-      port = 80
-    }
+  image_registry_credential {
+    server   = "myacr.azurecr.io"  # Replace with your ACR login server
+    username = var.acr_username    # Replace with ACR username or use a managed identity
+    password = var.acr_password    # Replace with ACR password or use a managed identity
   }
+
+  ip_address {
+    type            = "Public"
+    dns_name_label  = "${var.aci_name}-dns"
+  }
+
+  tags = {
+    environment = "testing"
+  }
+}
+
+resource "azurerm_key_vault" "main" {
+  name                = var.key_vault_name
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  sku_name            = "standard"
+  tenant_id           = data.azurerm_client_config.current.tenant_id
+}
+
+resource "azurerm_storage_account" "main" {
+  name                     = var.storage_account_name
+  resource_group_name      = var.resource_group_name
+  location                 = var.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+
+  allow_blob_public_access = false
+}
+
+resource "azurerm_public_ip" "main" {
+  name                = "fmkb_dt_public_ip"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  allocation_method   = "Static"
+  sku                 = "Standard"
 }
 
 resource "azurerm_application_gateway" "main" {
   name                = var.app_gateway_name
-  resource_group_name = azurerm_resource_group.main.name
-  location            = azurerm_resource_group.main.location
+  resource_group_name = var.resource_group_name
+  location            = var.location
+
   sku {
     name     = "Standard_v2"
     tier     = "Standard_v2"
@@ -74,26 +143,26 @@ resource "azurerm_application_gateway" "main" {
   }
 
   gateway_ip_configuration {
-    name      = "appgw-ip-config"
+    name      = "appgwIpConfig"
     subnet_id = azurerm_subnet.main.id
   }
 
   frontend_port {
-    name = "frontendPort"
+    name = "httpPort"
     port = 80
   }
 
   frontend_ip_configuration {
-    name                 = "appgw-ip-config"
+    name                 = "appgwFrontendIpConfig"
     public_ip_address_id = azurerm_public_ip.main.id
   }
 
   backend_address_pool {
-    name = "backendPool"
+    name = "appgwBackendPool"
   }
 
   backend_http_settings {
-    name                  = "httpSettings"
+    name                  = "appgwBackendHttpSettings"
     cookie_based_affinity = "Disabled"
     port                  = 80
     protocol              = "Http"
@@ -101,103 +170,54 @@ resource "azurerm_application_gateway" "main" {
   }
 
   http_listener {
-    name                           = "appgw-listener"
-    frontend_ip_configuration_name = "appgw-ip-config"
-    frontend_port_name             = "frontendPort"
+    name                           = "appgwHttpListener"
+    frontend_ip_configuration_name = "appgwFrontendIpConfig"
+    frontend_port_name             = "httpPort"
     protocol                       = "Http"
   }
 
   request_routing_rule {
-    name                       = "rule1"
+    name                       = "appgwRequestRoutingRule"
     rule_type                  = "Basic"
-    http_listener_name         = "appgw-listener"
-    backend_address_pool_name  = "backendPool"
-    backend_http_settings_name = "httpSettings"
-    priority                   = 100
+    http_listener_name         = "appgwHttpListener"
+    backend_address_pool_name  = "appgwBackendPool"
+    backend_http_settings_name = "appgwBackendHttpSettings"
+    priority                   = 100  # Added priority as required by newer API versions
   }
-}
-
-resource "azurerm_public_ip" "main" {
-  name                = "appgw-public-ip"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  allocation_method   = "Static"
-}
-
-resource "azurerm_key_vault" "main" {
-  name                = var.key_vault_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  tenant_id           = data.azurerm_client_config.current.tenant_id
-  sku_name            = "standard"
-}
-
-resource "azurerm_service_plan" "main" {
-  name                = "fmkb_dt_asp"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  os_type             = "Linux"
-  sku_name            = "Y1"  # Free Tier for Linux App Service
-}
-
-resource "azurerm_function_app" "main" {
-  name                       = var.app_service_name
-  location                   = azurerm_resource_group.main.location
-  resource_group_name        = azurerm_resource_group.main.name
-  service_plan_id            = azurerm_service_plan.main.id
-  storage_account_name       = azurerm_storage_account.main.name
-  storage_account_access_key = azurerm_storage_account.main.primary_access_key
 }
 
 resource "azurerm_private_endpoint" "main" {
   name                = var.private_link_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = var.location
+  resource_group_name = var.resource_group_name
   subnet_id           = azurerm_subnet.main.id
 
   private_service_connection {
-    name                           = "storagePrivateLink"
+    name                           = "privateConnection"
     private_connection_resource_id = azurerm_storage_account.main.id
+    is_manual_connection           = false
     subresource_names              = ["blob"]
   }
 }
 
-output "vm_id" {
-  value = azurerm_virtual_machine.main.id
+resource "azurerm_app_service_plan" "main" {
+  name                = "fmkb_dt_asp"
+  location            = var.location
+  resource_group_name = var.resource_group_name
+  kind                = "FunctionApp"
+
+  sku {
+    tier = "Dynamic"
+    size = "Y1"
+  }
 }
 
-output "aci_id" {
-  value = azurerm_container_group.main.id
-}
-
-output "key_vault_id" {
-  value = azurerm_key_vault.main.id
-}
-
-output "storage_account_id" {
-  value = azurerm_storage_account.main.id
-}
-
-output "app_gateway_id" {
-  value = azurerm_application_gateway.main.id
-}
-
-output "function_app_id" {
-  value = azurerm_function_app.main.id
-}
-
-output "private_link_id" {
-  value = azurerm_private_endpoint.main.id
-}
-
-output "vnet_id" {
-  value = azurerm_virtual_network.main.id
-}
-
-output "subnet_id" {
-  value = azurerm_subnet.main.id
-}
-
-output "nsg_id" {
-  value = azurerm_network_security_group.main.id
+resource "azurerm_function_app" "main" {
+  name                       = var.app_service_name
+  location                   = var.location
+  resource_group_name        = var.resource_group_name
+  app_service_plan_id        = azurerm_app_service_plan.main.id
+  storage_account_name       = azurerm_storage_account.main.name
+  storage_account_access_key = azurerm_storage_account.main.primary_access_key
+  version                    = "~3"
 }
