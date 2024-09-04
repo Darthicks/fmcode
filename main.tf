@@ -80,6 +80,7 @@ resource "azurerm_container_group" "main" {
     image  = "nginx:latest"
     cpu    = "0.5"
     memory = "1.5"
+
     ports {
       port     = 80
       protocol = "TCP"
@@ -88,9 +89,8 @@ resource "azurerm_container_group" "main" {
 
   ip_address_type = "Public"
   dns_name_label  = "${var.aci_name}-dns"
-  ports {
-    port     = 80
-    protocol = "TCP"
+  tags = {
+    environment = "testing"
   }
 }
 
@@ -122,26 +122,32 @@ resource "azurerm_application_gateway" "main" {
   name                = var.app_gateway_name
   resource_group_name = var.resource_group_name
   location            = var.location
+
   sku {
     name     = "Standard_v2"
     tier     = "Standard_v2"
     capacity = 2
   }
+
   gateway_ip_configuration {
     name      = "appgwIpConfig"
     subnet_id = azurerm_subnet.main.id
   }
+
   frontend_port {
     name = "httpPort"
     port = 80
   }
+
   frontend_ip_configuration {
     name                 = "appgwFrontendIpConfig"
     public_ip_address_id = azurerm_public_ip.main.id
   }
+
   backend_address_pool {
     name = "appgwBackendPool"
   }
+
   backend_http_settings {
     name                  = "appgwBackendHttpSettings"
     cookie_based_affinity = "Disabled"
@@ -149,12 +155,14 @@ resource "azurerm_application_gateway" "main" {
     protocol              = "Http"
     request_timeout       = 20
   }
+
   http_listener {
     name                           = "appgwHttpListener"
     frontend_ip_configuration_name = "appgwFrontendIpConfig"
     frontend_port_name             = "httpPort"
     protocol                       = "Http"
   }
+
   request_routing_rule {
     name                       = "appgwRequestRoutingRule"
     rule_type                  = "Basic"
@@ -169,6 +177,7 @@ resource "azurerm_private_endpoint" "main" {
   location            = var.location
   resource_group_name = var.resource_group_name
   subnet_id           = azurerm_subnet.main.id
+
   private_service_connection {
     name                           = "privateConnection"
     private_connection_resource_id = azurerm_storage_account.main.id
@@ -177,19 +186,22 @@ resource "azurerm_private_endpoint" "main" {
   }
 }
 
-resource "azurerm_service_plan" "main" {
+resource "azurerm_app_service_plan" "main" {
   name                = "fmkb_dt_asp"
   location            = var.location
   resource_group_name = var.resource_group_name
   kind                = "FunctionApp"
-  sku_name            = "Y1"
+  sku {
+    tier = "Dynamic"
+    size = "Y1"
+  }
 }
 
 resource "azurerm_function_app" "main" {
   name                 = var.app_service_name
   location             = var.location
   resource_group_name  = var.resource_group_name
-  app_service_plan_id  = azurerm_service_plan.main.id
+  app_service_plan_id  = azurerm_app_service_plan.main.id
   storage_account_name = azurerm_storage_account.main.name
   storage_account_access_key = azurerm_storage_account.main.primary_access_key
   version              = "~3"
