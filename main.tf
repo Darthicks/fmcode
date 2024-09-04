@@ -1,5 +1,4 @@
 provider "azurerm" {
-  features {}
 }
 
 data "azurerm_client_config" "current" {}
@@ -186,22 +185,25 @@ resource "azurerm_private_endpoint" "main" {
   }
 }
 
-resource "azurerm_app_service_plan" "main" {
+resource "azurerm_service_plan" "main" {
   name                = "fmkb_dt_asp"
   location            = var.location
   resource_group_name = var.resource_group_name
   kind                = "FunctionApp"
+
   sku {
     tier = "Dynamic"
     size = "Y1"
   }
+
+  os_type = "Linux"
 }
 
 resource "azurerm_function_app" "main" {
   name                 = var.app_service_name
   location             = var.location
   resource_group_name  = var.resource_group_name
-  app_service_plan_id  = azurerm_app_service_plan.main.id
+  app_service_plan_id  = azurerm_service_plan.main.id
   storage_account_name = azurerm_storage_account.main.name
   storage_account_access_key = azurerm_storage_account.main.primary_access_key
   version              = "~3"
