@@ -31,7 +31,7 @@ variable "key_vault_name" {
 variable "storage_account_name" {
   description = "The name of the Storage Account."
   type        = string
-  default     = "fmkbdtstorage"
+  default     = "fmkbdtstoragesc"
 }
  
 variable "app_gateway_name" {
