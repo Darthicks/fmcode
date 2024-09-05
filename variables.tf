@@ -28,11 +28,11 @@ variable "key_vault_name" {
   default     = "fmkbdtkeyvaults"
 }
 
-# variable "storage_account_name" {
-#   description = "The name of the Storage Account."
-#   type        = string
-#   default     = "fmkbdtstoragesc"
-# }
+ variable "storage_account_name" {
+   description = "The name of the Storage Account."
+   type        = string
+   default     = "fmkbdtblobstorage"
+ }
 
 variable "app_gateway_name" {
   description = "The name of the Application Gateway."
