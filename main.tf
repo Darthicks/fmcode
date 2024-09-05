@@ -6,9 +6,8 @@ provider "azurerm" {
 
 data "azurerm_client_config" "main" {}
 
-# Existing Resource Group
 data "azurerm_resource_group" "existing" {
-  name = var.resource_group_name
+  name = "fmkb-dt-dta01-rg"
 }
 
 resource "azurerm_virtual_network" "main" {
@@ -23,6 +22,14 @@ resource "azurerm_subnet" "main" {
   resource_group_name  = data.azurerm_resource_group.existing.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.1.0/24"]
+}
+
+# New dedicated subnet for Application Gateway
+resource "azurerm_subnet" "app_gateway_subnet" {
+  name                 = "appGatewaySubnet"
+  resource_group_name  = data.azurerm_resource_group.existing.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.2.0/24"]  # Ensure this does not overlap with other subnets
 }
 
 resource "azurerm_network_security_group" "main" {
@@ -74,35 +81,37 @@ resource "azurerm_linux_virtual_machine" "main" {
 }
 
 resource "azurerm_key_vault" "main" {
-  name                = var.key_vault_name
+  name                = "unique-key-vault-name"  # Change this to a unique name
   location            = data.azurerm_resource_group.existing.location
   resource_group_name = data.azurerm_resource_group.existing.name
   tenant_id           = data.azurerm_client_config.main.tenant_id
   sku_name            = "standard"
+
+  # soft_delete_enabled = true
 }
 
-# resource "azurerm_container_group" "main" {
- # name                = var.aci_name
- # location            = data.azurerm_resource_group.existing.location
- # resource_group_name = data.azurerm_resource_group.existing.name
- # os_type             = "Linux"
+resource "azurerm_container_group" "main" {
+  name                = var.aci_name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
+  os_type             = "Linux"
 
- # container {
- #   name   = "nginx"
- #   image  = "nginx:latest"
-  #  cpu    = "0.5"
-  #  memory = "1.5"
+  container {
+    name   = "nginx"
+    image  = "nginx:latest"
+    cpu    = "0.5"
+    memory = "1.5"
 
-   # ports {
-   #   port     = 80
-   #   protocol = "TCP"
-   # }
-  #}
+    ports {
+      port     = 80
+      protocol = "TCP"
+    }
+  }
 
-  # tags = {
-  #  environment = "testing"
-  #}
-#}
+  tags = {
+    environment = "testing"
+  }
+}
 
 # Commented out due to policy restrictions
 # resource "azurerm_storage_account" "main" {
@@ -129,8 +138,8 @@ resource "azurerm_public_ip" "main" {
   name                = "fmkbdtpublicip"
   location            = data.azurerm_resource_group.existing.location
   resource_group_name = data.azurerm_resource_group.existing.name
-  allocation_method   = "static"
-  sku = "standard"
+  allocation_method   = "Static"  # Changed to Static for Standard SKU
+  sku                 = "Standard" # Specify Standard SKU
 }
 
 resource "azurerm_application_gateway" "main" {
@@ -146,7 +155,7 @@ resource "azurerm_application_gateway" "main" {
 
   gateway_ip_configuration {
     name      = "appgwIpConfig"
-    subnet_id = azurerm_subnet.main.id
+    subnet_id = azurerm_subnet.app_gateway_subnet.id  # Use new subnet for Application Gateway
   }
 
   frontend_ip_configuration {
