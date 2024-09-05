@@ -113,15 +113,14 @@ resource "azurerm_container_group" "main" {
   }
 }
 
-# Commented out due to policy restrictions
-# resource "azurerm_storage_account" "main" {
-#   name                     = var.storage_account_name
-#   resource_group_name      = data.azurerm_resource_group.existing.name
-#   location                 = data.azurerm_resource_group.existing.location
-#   account_tier             = "Standard"
-#   account_replication_type = "LRS"
-#   allow_blob_public_access = false
-# }
+ resource "azurerm_storage_account" "main" {
+   name                     = var.storage_account_name
+   resource_group_name      = data.azurerm_resource_group.existing.name
+   location                 = data.azurerm_resource_group.existing.location
+   account_tier             = "Standard"
+   account_replication_type = "LRS"
+   allow_blob_public_access = false
+ }
 
 # Commented out as not needed
 # resource "azurerm_app_service_plan" "main" {
