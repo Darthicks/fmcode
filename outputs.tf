@@ -18,9 +18,9 @@ output "app_gateway_id" {
   value = azurerm_application_gateway.main.id
 }
 
-output "function_app_id" {
-  value = azurerm_function_app.main.id
-}
+# output "function_app_id" {
+ # value = azurerm_function_app.main.id
+# }
 
 output "private_link_id" {
   value = azurerm_private_endpoint.main.id
