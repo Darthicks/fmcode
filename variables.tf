@@ -58,11 +58,11 @@ variable "nsg_name" {
   default     = "fmkbdtnsg"
 }
  
-variable "app_service_name" {
-  description = "The name of the App Service for Azure Functions."
-  type        = string
-  default     = "fmkbdtappservice"
-}
+# variable "app_service_name" {
+ # description = "The name of the App Service for Azure Functions."
+ # type        = string
+ # default     = "fmkbdtappservice"
+# }
  
 variable "private_link_name" {
   description = "The name of the Private Link."
