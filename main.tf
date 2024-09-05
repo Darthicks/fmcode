@@ -113,14 +113,39 @@ resource "azurerm_container_group" "main" {
   }
 }
 
- resource "azurerm_storage_account" "main" {
-   name                     = var.storage_account_name
-   resource_group_name      = data.azurerm_resource_group.existing.name
-   location                 = data.azurerm_resource_group.existing.location
-   account_tier             = "Standard"
-   account_replication_type = "LRS"
-   allow_blob_public_access = false
- }
+resource "azurerm_storage_account" "main" {
+  name                     = var.storage_account_name
+  resource_group_name      = data.azurerm_resource_group.existing.name
+  location                 = data.azurerm_resource_group.existing.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+  allow_blob_public_access = false
+}
+
+resource "azurerm_storage_container" "blob_service" {
+  name                  = "default"
+  storage_account_name  = azurerm_storage_account.main.name
+
+  container_delete_retention_policy {
+    enabled = var.is_blob_soft_delete_enabled
+    days    = var.blob_soft_delete_retention_days
+  }
+
+  blob_delete_retention_policy {
+    enabled = var.is_container_soft_delete_enabled
+    days    = var.container_soft_delete_retention_days
+  }
+}
+
+resource "azurerm_storage_share" "file_service" {
+  name                  = "default"
+  storage_account_name  = azurerm_storage_account.main.name
+
+  share_delete_retention_policy {
+    enabled = var.is_share_soft_delete_enabled
+    days    = var.share_soft_delete_retention_days
+  }
+}
 
 # Commented out as not needed
 # resource "azurerm_app_service_plan" "main" {
