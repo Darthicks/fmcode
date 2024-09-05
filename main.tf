@@ -113,37 +113,33 @@ resource "azurerm_container_group" "main" {
   }
 }
 
+# Resource to create a storage account
 resource "azurerm_storage_account" "main" {
   name                     = var.storage_account_name
   resource_group_name      = data.azurerm_resource_group.existing.name
   location                 = data.azurerm_resource_group.existing.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
-  allow_blob_public_access = false
-}
+  account_kind             = "StorageV2"
 
-resource "azurerm_storage_container" "blob_service" {
-  name                  = "default"
-  storage_account_name  = azurerm_storage_account.main.name
+  # Set the minimum TLS version to enforce secure connections
+  min_tls_version = "TLS1_2"
 
-  container_delete_retention_policy {
-    enabled = var.is_blob_soft_delete_enabled
-    days    = var.blob_soft_delete_retention_days
+  # Restrict access to the storage account
+  network_rules {
+    default_action = "Deny"
+
   }
 
-  blob_delete_retention_policy {
-    enabled = var.is_container_soft_delete_enabled
-    days    = var.container_soft_delete_retention_days
-  }
-}
+  # Disable access to blob public access
+  blob_properties {
+    delete_retention_policy {
+      days = 7
+    }
 
-resource "azurerm_storage_share" "file_service" {
-  name                  = "default"
-  storage_account_name  = azurerm_storage_account.main.name
-
-  share_delete_retention_policy {
-    enabled = var.is_share_soft_delete_enabled
-    days    = var.share_soft_delete_retention_days
+    container_delete_retention_policy {
+      days = 7
+    }
   }
 }
 
