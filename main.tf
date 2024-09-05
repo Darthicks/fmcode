@@ -214,12 +214,12 @@ resource "azurerm_app_service_plan" "main" {
   }
 }
 
-resource "azurerm_function_app" "main" {
-  name                       = var.app_service_name
-  location                   = var.location
-  resource_group_name        = var.resource_group_name
-  app_service_plan_id        = azurerm_app_service_plan.main.id
-  storage_account_name       = "dummy-storage-account"
-  storage_account_access_key = "dummy-storage-account-key"
-  version                    = "~3"
-}
+# resource "azurerm_function_app" "main" {
+ # name                       = var.app_service_name
+ # location                   = var.location
+ #  resource_group_name        = var.resource_group_name
+ # app_service_plan_id        = azurerm_app_service_plan.main.id
+ # storage_account_name       = "dummy-storage-account"
+ # storage_account_access_key = "dummy-storage-account-key"
+ # version                    = "~3"
+# }
