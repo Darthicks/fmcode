@@ -113,25 +113,25 @@ resource "azurerm_key_vault" "main" {
   tenant_id           = data.azurerm_client_config.current.tenant_id
 }
 
-resource "azurerm_storage_account" "main" {
-  name                     = "${var.storage_account_name}${substr(md5(var.storage_account_name), 0, 8)}"  # Ensuring unique name
-  resource_group_name      = var.resource_group_name
-  location                 = var.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
+#resource "azurerm_storage_account" "main" {
+ # name                     = "${var.storage_account_name}${substr(md5(var.storage_account_name), 0, 8)}"  # Ensuring unique name
+ # resource_group_name      = var.resource_group_name
+ # location                 = var.location
+ # account_tier             = "Standard"
+ # account_replication_type = "LRS"
 
   # Ensure public access is restricted using network rules
-  network_rules {
-    default_action             = "Deny"  # Deny access to public endpoints
-    bypass                     = ["AzureServices"]
-    ip_rules                   = []
-    virtual_network_subnet_ids  = []
-  }
+  # network_rules {
+  #  default_action             = "Deny"  # Deny access to public endpoints
+  #  bypass                     = ["AzureServices"]
+  #  ip_rules                   = []
+  #  virtual_network_subnet_ids  = []
+  # }
 
-  tags = {
-    environment = "testing"
-  }
-}
+  # tags = {
+  #  environment = "testing"
+  # }
+# }
 
 
 resource "azurerm_public_ip" "main" {
