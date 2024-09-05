@@ -2,35 +2,39 @@ provider "azurerm" {
   features {}
   subscription_id = "07fba911-b0ce-4b88-993a-79b8e5de293a"
   resource_provider_registrations = "none"
- 
 }
 
 data "azurerm_client_config" "main" {}
 
+# Existing Resource Group
+data "azurerm_resource_group" "existing" {
+  name = var.resource_group_name
+}
+
 resource "azurerm_virtual_network" "main" {
   name                = var.vnet_name
   address_space       = ["10.0.0.0/16"]
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
 }
 
 resource "azurerm_subnet" "main" {
   name                 = var.subnet_name
-  resource_group_name  = azurerm_resource_group.main.name
+  resource_group_name  = data.azurerm_resource_group.existing.name
   virtual_network_name = azurerm_virtual_network.main.name
   address_prefixes     = ["10.0.1.0/24"]
 }
 
 resource "azurerm_network_security_group" "main" {
   name                = var.nsg_name
-  location            = var.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
 }
 
 resource "azurerm_network_interface" "main" {
   name                = "fmkb-dt-nic"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
 
   ip_configuration {
     name                          = "internal"
@@ -41,8 +45,8 @@ resource "azurerm_network_interface" "main" {
 
 resource "azurerm_linux_virtual_machine" "main" {
   name                = var.vm_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
   size                = "Standard_DS1_v2"
 
   admin_username = "adminuser"
@@ -71,18 +75,16 @@ resource "azurerm_linux_virtual_machine" "main" {
 
 resource "azurerm_key_vault" "main" {
   name                = var.key_vault_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
   tenant_id           = data.azurerm_client_config.main.tenant_id
   sku_name            = "standard"
-
-#  soft_delete_enabled = true
 }
 
 resource "azurerm_container_group" "main" {
   name                = var.aci_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
   os_type             = "Linux"
 
   container {
@@ -105,8 +107,8 @@ resource "azurerm_container_group" "main" {
 # Commented out due to policy restrictions
 # resource "azurerm_storage_account" "main" {
 #   name                     = var.storage_account_name
-#   resource_group_name      = azurerm_resource_group.main.name
-#   location                 = azurerm_resource_group.main.location
+#   resource_group_name      = data.azurerm_resource_group.existing.name
+#   location                 = data.azurerm_resource_group.existing.location
 #   account_tier             = "Standard"
 #   account_replication_type = "LRS"
 #   allow_blob_public_access = false
@@ -115,8 +117,8 @@ resource "azurerm_container_group" "main" {
 # Commented out as not needed
 # resource "azurerm_app_service_plan" "main" {
 #   name                = var.app_service_plan_name
-#   location            = azurerm_resource_group.main.location
-#   resource_group_name = azurerm_resource_group.main.name
+#   location            = data.azurerm_resource_group.existing.location
+#   resource_group_name = data.azurerm_resource_group.existing.name
 #   sku {
 #     tier = "Basic"
 #     size = "B1"
@@ -125,15 +127,15 @@ resource "azurerm_container_group" "main" {
 
 resource "azurerm_public_ip" "main" {
   name                = "fmkbdtpublicip"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
   allocation_method   = "Dynamic"
 }
 
 resource "azurerm_application_gateway" "main" {
   name                = var.app_gateway_name
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
+  location            = data.azurerm_resource_group.existing.location
+  resource_group_name = data.azurerm_resource_group.existing.name
 
   sku {
     name     = "Standard_v2"
