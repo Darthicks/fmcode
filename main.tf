@@ -78,7 +78,7 @@ resource "azurerm_key_vault" "main" {
   tenant_id           = data.azurerm_client_config.main.tenant_id
   sku_name            = "standard"
 
-  soft_delete_enabled = true
+#  soft_delete_enabled = true
 }
 
 resource "azurerm_container_group" "main" {
