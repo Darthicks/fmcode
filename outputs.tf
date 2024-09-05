@@ -1,6 +1,7 @@
 output "vm_id" {
-  value = azurerm_virtual_machine.main.id
+  value = azurerm_linux_virtual_machine.main.id
 }
+
 
 output "aci_id" {
   value = azurerm_container_group.main.id
