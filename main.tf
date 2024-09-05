@@ -13,14 +13,6 @@ resource "azurerm_virtual_network" "main" {
   resource_group_name = var.resource_group_name
 }
 
-# Separate subnet for Application Gateway
-resource "azurerm_subnet" "app_gateway_subnet" {
-  name                 = "appGatewaySubnet"
-  resource_group_name  = var.resource_group_name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = ["10.0.2.0/24"]
-}
-
 resource "azurerm_subnet" "main" {
   name                 = var.subnet_name
   resource_group_name  = var.resource_group_name
@@ -79,7 +71,6 @@ resource "azurerm_virtual_machine" "main" {
   }
 }
 
-# Use a public image accessible to Azure Container Instances
 resource "azurerm_container_group" "main" {
   name                = var.aci_name
   location            = var.location
@@ -88,7 +79,7 @@ resource "azurerm_container_group" "main" {
 
   container {
     name   = "nginx"
-    image  = "mcr.microsoft.com/azuredocs/aci-helloworld"  # Using a public image hosted on Microsoft Container Registry
+    image  = "nginx:latest"
     cpu    = "0.5"
     memory = "1.5"
 
@@ -113,26 +104,26 @@ resource "azurerm_key_vault" "main" {
   tenant_id           = data.azurerm_client_config.current.tenant_id
 }
 
-#resource "azurerm_storage_account" "main" {
- # name                     = "${var.storage_account_name}${substr(md5(var.storage_account_name), 0, 8)}"  # Ensuring unique name
- # resource_group_name      = var.resource_group_name
- # location                 = var.location
- # account_tier             = "Standard"
- # account_replication_type = "LRS"
+# Commented out azurerm_storage_account resource block
+# resource "azurerm_storage_account" "main" {
+#   name                     = "${var.storage_account_name}${substr(md5(var.storage_account_name), 0, 8)}"  # Ensuring unique name
+#   resource_group_name      = var.resource_group_name
+#   location                 = var.location
+#   account_tier             = "Standard"
+#   account_replication_type = "LRS"
 
-  # Ensure public access is restricted using network rules
-  # network_rules {
-  #  default_action             = "Deny"  # Deny access to public endpoints
-  #  bypass                     = ["AzureServices"]
-  #  ip_rules                   = []
-  #  virtual_network_subnet_ids  = []
-  # }
+#   # Ensure public access is restricted using network rules
+#   network_rules {
+#     default_action             = "Deny"  # Deny access to public endpoints
+#     bypass                     = ["AzureServices"]
+#     ip_rules                   = []
+#     virtual_network_subnet_ids  = []
+#   }
 
-  # tags = {
-  #  environment = "testing"
-  # }
+#   tags = {
+#     environment = "testing"
+#   }
 # }
-
 
 resource "azurerm_public_ip" "main" {
   name                = "fmkb_dt_public_ip"
@@ -155,7 +146,7 @@ resource "azurerm_application_gateway" "main" {
 
   gateway_ip_configuration {
     name      = "appgwIpConfig"
-    subnet_id = azurerm_subnet.app_gateway_subnet.id
+    subnet_id = azurerm_subnet.main.id
   }
 
   frontend_port {
@@ -193,7 +184,7 @@ resource "azurerm_application_gateway" "main" {
     http_listener_name         = "appgwHttpListener"
     backend_address_pool_name  = "appgwBackendPool"
     backend_http_settings_name = "appgwBackendHttpSettings"
-    priority                   = 100
+    priority                   = 1
   }
 }
 
@@ -205,9 +196,9 @@ resource "azurerm_private_endpoint" "main" {
 
   private_service_connection {
     name                           = "privateConnection"
-    private_connection_resource_id = azurerm_storage_account.main.id
+    private_connection_resource_id = azurerm_key_vault.main.id
     is_manual_connection           = false
-    subresource_names              = ["blob"]
+    subresource_names              = ["vault"]
   }
 }
 
@@ -228,7 +219,7 @@ resource "azurerm_function_app" "main" {
   location                   = var.location
   resource_group_name        = var.resource_group_name
   app_service_plan_id        = azurerm_app_service_plan.main.id
-  storage_account_name       = azurerm_storage_account.main.name
-  storage_account_access_key = azurerm_storage_account.main.primary_access_key
+  storage_account_name       = "dummy-storage-account"
+  storage_account_access_key = "dummy-storage-account-key"
   version                    = "~3"
 }
