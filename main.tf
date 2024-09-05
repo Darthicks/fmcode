@@ -81,28 +81,28 @@ resource "azurerm_key_vault" "main" {
   sku_name            = "standard"
 }
 
-resource "azurerm_container_group" "main" {
-  name                = var.aci_name
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
-  os_type             = "Linux"
+# resource "azurerm_container_group" "main" {
+ # name                = var.aci_name
+ # location            = data.azurerm_resource_group.existing.location
+ # resource_group_name = data.azurerm_resource_group.existing.name
+ # os_type             = "Linux"
 
-  container {
-    name   = "nginx"
-    image  = "nginx:latest"
-    cpu    = "0.5"
-    memory = "1.5"
+ # container {
+ #   name   = "nginx"
+ #   image  = "nginx:latest"
+  #  cpu    = "0.5"
+  #  memory = "1.5"
 
-    ports {
-      port     = 80
-      protocol = "TCP"
-    }
-  }
+   # ports {
+   #   port     = 80
+   #   protocol = "TCP"
+   # }
+  #}
 
-  tags = {
-    environment = "testing"
-  }
-}
+  # tags = {
+  #  environment = "testing"
+  #}
+#}
 
 # Commented out due to policy restrictions
 # resource "azurerm_storage_account" "main" {
@@ -129,7 +129,8 @@ resource "azurerm_public_ip" "main" {
   name                = "fmkbdtpublicip"
   location            = data.azurerm_resource_group.existing.location
   resource_group_name = data.azurerm_resource_group.existing.name
-  allocation_method   = "Dynamic"
+  allocation_method   = "static"
+  sku = "standard"
 }
 
 resource "azurerm_application_gateway" "main" {
