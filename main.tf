@@ -113,7 +113,6 @@ resource "azurerm_key_vault" "main" {
   tenant_id           = data.azurerm_client_config.current.tenant_id
 }
 
-# Ensure public access to the storage account is disabled
 resource "azurerm_storage_account" "main" {
   name                     = "${var.storage_account_name}${substr(md5(var.storage_account_name), 0, 8)}"  # Ensuring unique name
   resource_group_name      = var.resource_group_name
@@ -121,8 +120,19 @@ resource "azurerm_storage_account" "main" {
   account_tier             = "Standard"
   account_replication_type = "LRS"
 
-  allow_blob_public_access  = false  # Disable public access as per policy
+  # Ensure public access is restricted using network rules
+  network_rules {
+    default_action             = "Deny"  # Deny access to public endpoints
+    bypass                     = ["AzureServices"]
+    ip_rules                   = []
+    virtual_network_subnet_ids  = []
+  }
+
+  tags = {
+    environment = "testing"
+  }
 }
+
 
 resource "azurerm_public_ip" "main" {
   name                = "fmkb_dt_public_ip"
