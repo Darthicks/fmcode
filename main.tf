@@ -2,6 +2,8 @@ provider "azurerm" {
   features {}
 }
 
+data "azurerm_client_config" "main" {}
+
 resource "azurerm_resource_group" "main" {
   name     = var.resource_group_name
   location = var.location
@@ -53,7 +55,7 @@ resource "azurerm_linux_virtual_machine" "main" {
 
   admin_ssh_key {
     username   = "adminuser"
-    public_key = file("${path.module}/ssh_key.pub")
+    public_key = file("${path.module}/ssh_key.pub")  # Ensure this file exists
   }
 
   os_disk {
@@ -122,6 +124,13 @@ resource "azurerm_container_group" "main" {
 #     size = "B1"
 #   }
 # }
+
+resource "azurerm_public_ip" "main" {
+  name                = "fmkbdtpublicip"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  allocation_method   = "Dynamic"
+}
 
 resource "azurerm_application_gateway" "main" {
   name                = var.app_gateway_name
