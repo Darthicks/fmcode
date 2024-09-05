@@ -81,7 +81,7 @@ resource "azurerm_linux_virtual_machine" "main" {
 }
 
 resource "azurerm_key_vault" "main" {
-  name                = var.keyvault_name  # Change this to a unique name
+  name                = var.key_vault_name  # Change this to a unique name
   location            = data.azurerm_resource_group.existing.location
   resource_group_name = data.azurerm_resource_group.existing.name
   tenant_id           = data.azurerm_client_config.main.tenant_id
