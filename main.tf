@@ -79,6 +79,7 @@ resource "azurerm_virtual_machine" "main" {
   }
 }
 
+# Use a public image accessible to Azure Container Instances
 resource "azurerm_container_group" "main" {
   name                = var.aci_name
   location            = var.location
@@ -87,7 +88,7 @@ resource "azurerm_container_group" "main" {
 
   container {
     name   = "nginx"
-    image  = "nginx:latest"
+    image  = "mcr.microsoft.com/azuredocs/aci-helloworld"  # Using a public image hosted on Microsoft Container Registry
     cpu    = "0.5"
     memory = "1.5"
 
@@ -112,12 +113,15 @@ resource "azurerm_key_vault" "main" {
   tenant_id           = data.azurerm_client_config.current.tenant_id
 }
 
+# Ensure public access to the storage account is disabled
 resource "azurerm_storage_account" "main" {
   name                     = "${var.storage_account_name}${substr(md5(var.storage_account_name), 0, 8)}"  # Ensuring unique name
   resource_group_name      = var.resource_group_name
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+
+  allow_blob_public_access  = false  # Disable public access as per policy
 }
 
 resource "azurerm_public_ip" "main" {
