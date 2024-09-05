@@ -25,7 +25,7 @@ variable "aci_name" {
 variable "key_vault_name" {
   description = "The name of the Azure Key Vault."
   type        = string
-  default     = "fmkbdtkeyvault"
+  default     = "fmkbdtkeyvaults"
 }
 
 # variable "storage_account_name" {
