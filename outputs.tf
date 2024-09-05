@@ -10,9 +10,9 @@ output "key_vault_id" {
   value = azurerm_key_vault.main.id
 }
 
-output "storage_account_id" {
-  value = azurerm_storage_account.main.id
-}
+# output "storage_account_id" {
+#  value = azurerm_storage_account.main.id
+# }
 
 output "app_gateway_id" {
   value = azurerm_application_gateway.main.id
