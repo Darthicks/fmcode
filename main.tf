@@ -52,14 +52,13 @@ resource "azurerm_private_dns_a_record" "private_endpoint_a_record_blob" {
 
 # Storage Account
 resource "azurerm_storage_account" "sa" {
-  name                            = var.name
-  tags                            = var.tags
-  account_kind                    = var.account_kind
-  resource_group_name             = data.azurerm_resource_group.rg.name
-  location                        = data.azurerm_resource_group.rg.location
-  account_tier                    = var.account_tier
-  account_replication_type        = var.account_replication_type
-  allow_blob_public_access         = false # No public access to blobs
+  name                            = "fmkbdtblobstorage"
+  # tags                            = var.tags
+  account_kind                    = "Storage"
+  resource_group_name             = var.resource_group_name
+  location                        = var.location
+  account_tier                    = "standard"
+  account_replication_type        = "GRS"
   allow_nested_items_to_be_public  = false
 
   network_rules {
