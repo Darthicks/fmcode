@@ -1,218 +1,76 @@
+# Default AzureRM Provider
 provider "azurerm" {
   features {}
-  subscription_id = "07fba911-b0ce-4b88-993a-79b8e5de293a"
-  resource_provider_registrations = "none"
+  skip_provider_registration = true
+subscription_id = "07fba911-b0ce-4b88-993a-79b8e5de293a"
 }
 
-data "azurerm_client_config" "main" {}
-
-data "azurerm_resource_group" "existing" {
-  name = "fmkb-dt-dta01-rg"
+# Custom AzureRM CCoE Provider
+provider "azurerm" {
+  features {}
+  skip_provider_registration = true
+  alias                      = "ccoe"
+  subscription_id            = "19a5edd0-42d3-4b5f-88b5-45f718494ad3"
 }
 
-resource "azurerm_virtual_network" "main" {
-  name                = var.vnet_name
-  address_space       = ["10.0.0.0/16"]
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
+# Resource Group Data Source
+data "azurerm_resource_group" "rg" {
+  name = var.resource_group_name
 }
 
-resource "azurerm_subnet" "main" {
+# Subnet Data Source
+data "azurerm_subnet" "frontend01_subnet" {
   name                 = var.subnet_name
-  resource_group_name  = data.azurerm_resource_group.existing.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = ["10.0.1.0/24"]
+  resource_group_name  = var.network_resource_group_name
+  virtual_network_name = var.virtual_network_name
 }
 
-# New dedicated subnet for Application Gateway
-resource "azurerm_subnet" "app_gateway_subnet" {
-  name                 = "appGatewaySubnet"
-  resource_group_name  = data.azurerm_resource_group.existing.name
-  virtual_network_name = azurerm_virtual_network.main.name
-  address_prefixes     = ["10.0.2.0/24"]  # Ensure this does not overlap with other subnets
-}
+# Private Endpoint for Blob Storage
+resource "azurerm_private_endpoint" "blob" {
+  name                = "${random_string.random.result}-blob-endpoint"
+  location            = data.azurerm_resource_group.rg.location
+  resource_group_name = data.azurerm_resource_group.rg.name
+  subnet_id           = data.azurerm_subnet.frontend01_subnet.id
 
-resource "azurerm_network_security_group" "main" {
-  name                = var.nsg_name
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
-}
-
-resource "azurerm_network_interface" "main" {
-  name                = "fmkb-dt-nic"
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
-
-  ip_configuration {
-    name                          = "internal"
-    subnet_id                     = azurerm_subnet.main.id
-    private_ip_address_allocation = "Dynamic"
+  private_service_connection {
+    name                           = "${random_string.random.result}-privateserviceconnection-blob"
+    private_connection_resource_id = azurerm_storage_account.sa.id
+    subresource_names              = ["blob"]
+    is_manual_connection           = false
   }
 }
 
-resource "azurerm_linux_virtual_machine" "main" {
-  name                = var.vm_name
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
-  size                = "Standard_DS1_v2"
-
-  admin_username = "adminuser"
-
-  network_interface_ids = [
-    azurerm_network_interface.main.id,
-  ]
-
-  admin_ssh_key {
-    username   = "adminuser"
-    public_key = file("${path.module}/ssh_key.pub")  # Ensure this file exists
-  }
-
-  os_disk {
-    caching              = "ReadWrite"
-    storage_account_type = "Standard_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "UbuntuServer"
-    sku       = "18.04-LTS"
-    version   = "latest"
-  }
+# Private DNS Record for Blob Private Link
+resource "azurerm_private_dns_a_record" "private_endpoint_a_record_blob" {
+  provider            = azurerm.ccoe
+  name                = azurerm_storage_account.sa.name
+  zone_name           = "privatelink.blob.core.windows.net"
+  resource_group_name = "dns-mgt01-rg"
+  ttl                 = 300
+  records             = [azurerm_private_endpoint.blob.private_service_connection[0].private_ip_address]
 }
 
-resource "azurerm_key_vault" "main" {
-  name                = var.key_vault_name  # Change this to a unique name
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
-  tenant_id           = data.azurerm_client_config.main.tenant_id
-  sku_name            = "standard"
+# Storage Account
+resource "azurerm_storage_account" "sa" {
+  name                            = var.name
+  tags                            = var.tags
+  account_kind                    = var.account_kind
+  resource_group_name             = data.azurerm_resource_group.rg.name
+  location                        = data.azurerm_resource_group.rg.location
+  account_tier                    = var.account_tier
+  account_replication_type        = var.account_replication_type
+  allow_blob_public_access         = false # No public access to blobs
+  allow_nested_items_to_be_public  = false
 
-  # soft_delete_enabled = true
-}
-
-resource "azurerm_container_group" "main" {
-  name                = var.aci_name
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
-  os_type             = "Linux"
-
-  container {
-    name   = "nginx"
-    image  = "nginx:latest"
-    cpu    = "0.5"
-    memory = "1.5"
-
-    ports {
-      port     = 80
-      protocol = "TCP"
-    }
-  }
-
-  tags = {
-    environment = "testing"
-  }
-}
-
-# Resource to create a storage account
-resource "azurerm_storage_account" "main" {
-  name                     = var.storage_account_name
-  resource_group_name      = data.azurerm_resource_group.existing.name
-  location                 = data.azurerm_resource_group.existing.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
-  account_kind             = "StorageV2"
-
-  # Set the minimum TLS version to enforce secure connections
-  min_tls_version = "TLS1_2"
-
-  # Restrict access to the storage account
   network_rules {
     default_action = "Deny"
-
-  }
-
-  # Disable access to blob public access
-  blob_properties {
-    delete_retention_policy {
-      days = 7
-    }
-
-    container_delete_retention_policy {
-      days = 7
-    }
+    bypass         = ["AzureServices"]
   }
 }
 
-# Commented out as not needed
-# resource "azurerm_app_service_plan" "main" {
-#   name                = var.app_service_plan_name
-#   location            = data.azurerm_resource_group.existing.location
-#   resource_group_name = data.azurerm_resource_group.existing.name
-#   sku {
-#     tier = "Basic"
-#     size = "B1"
-#   }
-# }
-
-resource "azurerm_public_ip" "main" {
-  name                = "fmkbdtpublicip"
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
-  allocation_method   = "Static"  # Changed to Static for Standard SKU
-  sku                 = "Standard" # Specify Standard SKU
-}
-
-resource "azurerm_application_gateway" "main" {
-  name                = var.app_gateway_name
-  location            = data.azurerm_resource_group.existing.location
-  resource_group_name = data.azurerm_resource_group.existing.name
-
-  sku {
-    name     = "Standard_v2"
-    tier     = "Standard_v2"
-    capacity = 2
-  }
-
-  gateway_ip_configuration {
-    name      = "appgwIpConfig"
-    subnet_id = azurerm_subnet.app_gateway_subnet.id  # Use new subnet for Application Gateway
-  }
-
-  frontend_ip_configuration {
-    name                 = "appgwFrontendIpConfig"
-    public_ip_address_id = azurerm_public_ip.main.id
-  }
-
-  frontend_port {
-    name = "httpPort"
-    port = 80
-  }
-
-  backend_address_pool {
-    name = "appgwBackendPool"
-  }
-
-  backend_http_settings {
-    name                  = "appgwBackendHttpSettings"
-    cookie_based_affinity = "Disabled"
-    port                  = 80
-    protocol              = "Http"
-    request_timeout       = 20
-  }
-
-  http_listener {
-    name                           = "appgwHttpListener"
-    frontend_ip_configuration_name = "appgwFrontendIpConfig"
-    frontend_port_name             = "httpPort"
-    protocol                       = "Http"
-  }
-
-  request_routing_rule {
-    name                       = "appgwRequestRoutingRule"
-    rule_type                  = "Basic"
-    http_listener_name         = "appgwHttpListener"
-    backend_address_pool_name  = "appgwBackendPool"
-    backend_http_settings_name = "appgwBackendHttpSettings"
-    priority                   = 1
-  }
+# Random String for Unique Naming
+resource "random_string" "random" {
+  length  = 8
+  special = false
+  upper   = false
 }
